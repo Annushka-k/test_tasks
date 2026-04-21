@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: Book Store User Registration API
+  version: 1.0.0
+
+paths:
+  /api/v1/users/register:
+    post:
+      summary: Register new user
+      description: Creates a new Book Store user after validating fields and captcha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              successRequest:
+                value:
+                  firstName: Ivan
+                  lastName: Ivanov
+                  userName: ivan
+                  password: Qwerty1!
+                  captchaToken: 03AFcWeA7...
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+              examples:
+                success:
+                  value:
+                    userId: 8d4b0d25-6ad0-4f24-bf9d-f334b28e9b76
+                    firstName: Ivan
+                    lastName: Ivanov
+                    userName: ivan
+                    status: ACTIVE
+                    message: User Register Successfully.
+        '400':
+          description: Validation error or captcha error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                weakPassword:
+                  value:
+                    timestamp: "2026-04-21T12:30:45Z"
+                    status: 400
+                    error: Bad Request
+                    message: Validation failed
+                    path: /api/v1/users/register
+                    fieldErrors:
+                      - field: password
+                        code: PASSWORD_POLICY_VIOLATION
+                        message: "Passwords must have at least one non alphanumeric character, one digit ('0'-'9'), one uppercase ('A'-'Z'), one lowercase ('a'-'z'), one special character and Password must be eight characters or longer."
+                captchaMissing:
+                  value:
+                    timestamp: "2026-04-21T12:31:55Z"
+                    status: 400
+                    error: Bad Request
+                    message: Please verify reCAPTCHA to register
+                    path: /api/v1/users/register
+                    fieldErrors:
+                      - field: captchaToken
+                        code: CAPTCHA_REQUIRED
+                        message: Please verify reCAPTCHA to register
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                userExists:
+                  value:
+                    timestamp: "2026-04-21T12:31:10Z"
+                    status: 409
+                    error: Conflict
+                    message: User exists!
+                    path: /api/v1/users/register
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - userName
+        - password
+        - captchaToken
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        userName:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: '^[A-Za-z0-9._-]+$'
+        password:
+          type: string
+          minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$'
+        captchaToken:
+          type: string
+          minLength: 1
+
+    RegisterSuccessResponse:
+      type: object
+      required:
+        - userId
+        - firstName
+        - lastName
+        - userName
+        - status
+        - message
+      properties:
+        userId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userName:
+          type: string
+        status:
+          type: string
+          example: ACTIVE
+        message:
+          type: string
+          example: User Register Successfully.
+
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        fieldErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
